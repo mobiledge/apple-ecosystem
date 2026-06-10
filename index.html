@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Apple Ecosystem — Interactive Graph</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.28.1/cytoscape.min.js"></script>
+<style>
+  :root {
+    --bg-deep: #050507;
+    --bg-mid: #131318;
+    --glass: rgba(28, 28, 30, 0.72);
+    --glass-border: rgba(255, 255, 255, 0.10);
+    --text-primary: rgba(255, 255, 255, 0.92);
+    --text-secondary: rgba(255, 255, 255, 0.55);
+    --text-tertiary: rgba(255, 255, 255, 0.35);
+    --c-device: #0A84FF;
+    --c-software: #30D158;
+    --c-developer: #FF9F0A;
+    --c-event: #BF5AF2;
+    --c-silicon: #FF375F;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: radial-gradient(1200px 800px at 65% 35%, var(--bg-mid) 0%, var(--bg-deep) 70%);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+  }
+  #cy { position: absolute; inset: 0; }
+
+  /* ---------- Header ---------- */
+  header {
+    position: absolute; top: 28px; left: 32px; z-index: 10; pointer-events: none;
+    max-width: 340px;
+  }
+  .eyebrow {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--text-tertiary); margin-bottom: 6px;
+  }
+  h1 {
+    font-size: 28px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1;
+    background: linear-gradient(90deg, #fff 0%, rgba(255,255,255,0.65) 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .hint { margin-top: 10px; font-size: 12.5px; color: var(--text-secondary); line-height: 1.5; }
+  .hint kbd {
+    font-family: inherit; font-size: 11px; padding: 1px 6px; border-radius: 5px;
+    background: rgba(255,255,255,0.08); border: 1px solid var(--glass-border); color: var(--text-secondary);
+  }
+
+  /* ---------- Legend ---------- */
+  .legend {
+    position: absolute; bottom: 24px; left: 32px; z-index: 10;
+    display: flex; gap: 8px; flex-wrap: wrap; max-width: 60vw;
+  }
+  .legend-pill {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-size: 11.5px; font-weight: 500; color: var(--text-secondary);
+    padding: 6px 12px; border-radius: 999px;
+    background: var(--glass); border: 1px solid var(--glass-border);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  }
+  .legend-dot {
+    width: 18px; height: 18px; border-radius: 50%; flex-shrink: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .legend-dot img { width: 11px; height: 11px; display: block; }
+
+  /* ---------- Info panel (the macOS-style glass popover) ---------- */
+  .panel {
+    position: absolute; top: 24px; right: 24px; z-index: 20;
+    width: 320px; max-width: calc(100vw - 48px); max-height: calc(100vh - 48px);
+    overflow-y: auto;
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    border-radius: 18px;
+    backdrop-filter: blur(28px) saturate(1.4);
+    -webkit-backdrop-filter: blur(28px) saturate(1.4);
+    box-shadow: 0 24px 60px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.06);
+    padding: 20px;
+    opacity: 0; transform: translateX(12px); pointer-events: none;
+    transition: opacity 0.28s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .panel.visible { opacity: 1; transform: translateX(0); pointer-events: auto; }
+  @media (prefers-reduced-motion: reduce) {
+    .panel { transition: opacity 0.1s linear; transform: none; }
+  }
+  .panel-close {
+    position: absolute; top: 14px; right: 14px;
+    width: 26px; height: 26px; border-radius: 50%; border: none; cursor: pointer;
+    background: rgba(255,255,255,0.08); color: var(--text-secondary);
+    font-size: 13px; line-height: 1; display: flex; align-items: center; justify-content: center;
+  }
+  .panel-close:hover { background: rgba(255,255,255,0.16); color: var(--text-primary); }
+  .panel-close:focus-visible, .panel a:focus-visible, .neighbor-btn:focus-visible {
+    outline: 2px solid var(--c-device); outline-offset: 2px;
+  }
+  .badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 10.5px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase;
+    padding: 4px 10px; border-radius: 999px; margin-bottom: 12px;
+    background: rgba(255,255,255,0.06); border: 1px solid var(--glass-border);
+  }
+  .panel h2 { font-size: 21px; font-weight: 700; letter-spacing: -0.015em; margin-bottom: 6px; padding-right: 20px; }
+  .panel .desc { font-size: 13px; line-height: 1.55; color: var(--text-secondary); margin-bottom: 16px; }
+  .open-link {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 13px; font-weight: 600; text-decoration: none;
+    color: #fff; padding: 9px 16px; border-radius: 999px;
+    background: var(--accent, var(--c-device));
+    transition: filter 0.15s ease;
+  }
+  .open-link:hover { filter: brightness(1.15); }
+  .connections-label {
+    margin-top: 20px; margin-bottom: 8px;
+    font-size: 10.5px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--text-tertiary);
+  }
+  .neighbor-btn {
+    display: flex; align-items: center; gap: 9px; width: 100%; text-align: left;
+    background: transparent; border: none; cursor: pointer;
+    padding: 8px 10px; border-radius: 10px;
+    font-family: inherit; font-size: 13px; color: var(--text-primary);
+  }
+  .neighbor-btn:hover { background: rgba(255,255,255,0.07); }
+  .neighbor-btn .legend-dot { width: 16px; height: 16px; }
+  .neighbor-btn .legend-dot img { width: 9px; height: 9px; }
+  .neighbor-rel { margin-left: auto; font-size: 11px; color: var(--text-tertiary); font-weight: 400; }
+
+  @media (max-width: 640px) {
+    header { left: 20px; top: 20px; max-width: 240px; }
+    h1 { font-size: 22px; }
+    .legend { left: 20px; bottom: 16px; max-width: calc(100vw - 40px); }
+    .panel { top: auto; bottom: 0; right: 0; left: 0; width: 100%; max-width: 100%;
+             border-radius: 18px 18px 0 0; max-height: 55vh; transform: translateY(16px); }
+    .panel.visible { transform: translateY(0); }
+  }
+</style>
+</head>
+<body>
+
+<div id="cy" aria-label="Interactive graph of the Apple ecosystem"></div>
+
+<header>
+  <div class="eyebrow">Interactive Prototype</div>
+  <h1>The Apple Ecosystem</h1>
+  <p class="hint">Tap a node to highlight its connections. Double-tap to open its page. Press <kbd>esc</kbd> or tap the background to reset.</p>
+</header>
+
+<div class="legend" id="legend"></div>
+
+<aside class="panel" id="panel" role="dialog" aria-label="Node details">
+  <button class="panel-close" id="panelClose" aria-label="Close details">✕</button>
+  <div id="panelBody"></div>
+</aside>
+
+<script>
+const CATEGORY = {
+  event:     { label: 'Event',          color: '#BF5AF2', icon: 'calendar' },
+  device:    { label: 'Device',         color: '#0A84FF', icon: 'phone' },
+  software:  { label: 'Software',       color: '#30D158', icon: 'grid' },
+  developer: { label: 'Developer Tool', color: '#FF9F0A', icon: 'code' },
+  silicon:   { label: 'Apple Silicon',  color: '#FF375F', icon: 'chip' },
+};
+
+// ---------- Icons (inline SVG → data URIs, usable as Cytoscape node backgrounds) ----------
+const ICON_SVG = {
+  phone:    '<rect x="7" y="2.5" width="10" height="19" rx="2.5"/><line x1="10.5" y1="18" x2="13.5" y2="18"/>',
+  watch:    '<rect x="7" y="6.5" width="10" height="11" rx="3"/><path d="M9.5 6.5V3h5v3.5M9.5 17.5V21h5v-3.5"/>',
+  vision:   '<path d="M2.5 11c0-2.4 2-4 4.5-4h10c2.5 0 4.5 1.6 4.5 4v1.4c0 2.3-1.8 4.1-4 4.1-1.3 0-2.3-.7-3.2-1.6-.7-.7-1.9-.7-2.6 0-.9.9-1.9 1.6-3.2 1.6-2.2 0-4-1.8-4-4.1z"/>',
+  chip:     '<rect x="7" y="7" width="10" height="10" rx="2"/><path d="M9.5 7V4M12 7V4M14.5 7V4M9.5 20v-3M12 20v-3M14.5 20v-3M7 9.5H4M7 12H4M7 14.5H4M20 9.5h-3M20 12h-3M20 14.5h-3"/>',
+  grid:     '<rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/>',
+  code:     '<path d="M8.5 7L4 12l4.5 5M15.5 7L20 12l-4.5 5"/>',
+  calendar: '<rect x="4" y="5.5" width="16" height="15" rx="2.5"/><path d="M4 10.5h16M8.5 3v4M15.5 3v4"/>',
+  sparkle:  '<path d="M12 3l2.2 6.1L20 12l-5.8 2.9L12 21l-2.2-6.1L4 12l5.8-2.9z"/>',
+};
+
+// Per-node overrides; everything else falls back to its category's icon
+const NODE_ICONS = {
+  watchs9: 'watch',
+  visionpro: 'vision',
+  appleintel: 'sparkle',
+};
+
+function iconUri(name, color = '#ffffff') {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICON_SVG[name]}</svg>`;
+  return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+}
+
+const NODES = [
+  // Events
+  { id: 'wwdc23',     label: 'WWDC 2023',            cat: 'event',     url: 'https://en.wikipedia.org/wiki/Worldwide_Developers_Conference', desc: 'Apple\u2019s developer conference where visionOS, iOS 17, and Apple Vision Pro were unveiled.' },
+  { id: 'wonderlust', label: 'Wonderlust (Sep 2023)', cat: 'event',     url: 'https://en.wikipedia.org/wiki/IPhone_15', desc: 'September 2023 keynote introducing the iPhone 15 lineup and Apple Watch Series 9.' },
+  { id: 'wwdc24',     label: 'WWDC 2024',            cat: 'event',     url: 'https://en.wikipedia.org/wiki/Worldwide_Developers_Conference', desc: 'The 2024 keynote centered on Apple Intelligence, iOS 18, and Xcode 16.' },
+  { id: 'glowtime',   label: 'Glowtime (Sep 2024)',  cat: 'event',     url: 'https://en.wikipedia.org/wiki/IPhone_16', desc: 'September 2024 event debuting the iPhone 16 family and the A18 chip.' },
+  // Devices
+  { id: 'iphone15',    label: 'iPhone 15',          cat: 'device',    url: 'https://en.wikipedia.org/wiki/IPhone_15', desc: 'Apple\u2019s 2023 flagship phone, the first base model with USB-C and the Dynamic Island.' },
+  { id: 'iphone15pro', label: 'iPhone 15 Pro',      cat: 'device',    url: 'https://en.wikipedia.org/wiki/IPhone_15_Pro', desc: 'Titanium-bodied Pro model powered by the A17 Pro, Apple\u2019s first 3 nm phone chip.' },
+  { id: 'iphone16',    label: 'iPhone 16',          cat: 'device',    url: 'https://en.wikipedia.org/wiki/IPhone_16', desc: 'The 2024 iPhone, built around Apple Intelligence with the new Camera Control.' },
+  { id: 'watchs9',     label: 'Apple Watch S9',     cat: 'device',    url: 'https://en.wikipedia.org/wiki/Apple_Watch_Series_9', desc: 'Adds the S9 chip and the Double Tap gesture, announced alongside iPhone 15.' },
+  { id: 'visionpro',   label: 'Apple Vision Pro',   cat: 'device',    url: 'https://en.wikipedia.org/wiki/Apple_Vision_Pro', desc: 'Apple\u2019s spatial computer, unveiled at WWDC 2023 and shipped in early 2024.' },
+  // Silicon
+  { id: 'a17pro', label: 'A17 Pro', cat: 'silicon', url: 'https://en.wikipedia.org/wiki/Apple_A17', desc: 'The first 3-nanometer smartphone SoC, with hardware ray tracing.' },
+  { id: 'a18',    label: 'A18',     cat: 'silicon', url: 'https://en.wikipedia.org/wiki/Apple_A18', desc: 'The chip behind iPhone 16, tuned for on-device Apple Intelligence models.' },
+  // Software
+  { id: 'ios17',    label: 'iOS 17',             cat: 'software', url: 'https://en.wikipedia.org/wiki/IOS_17', desc: 'Brought StandBy, Contact Posters, and interactive widgets to iPhone.' },
+  { id: 'ios18',    label: 'iOS 18',             cat: 'software', url: 'https://en.wikipedia.org/wiki/IOS_18', desc: 'Introduced deep customization and serves as the foundation for Apple Intelligence.' },
+  { id: 'sonoma',   label: 'macOS Sonoma',       cat: 'software', url: 'https://en.wikipedia.org/wiki/MacOS_Sonoma', desc: 'The 2023 Mac release with desktop widgets and Game Mode.' },
+  { id: 'watchos10',label: 'watchOS 10',         cat: 'software', url: 'https://en.wikipedia.org/wiki/WatchOS', desc: 'A redesign of watchOS around full-screen Smart Stack widgets.' },
+  { id: 'visionos', label: 'visionOS',           cat: 'software', url: 'https://en.wikipedia.org/wiki/VisionOS', desc: 'The spatial operating system that powers Apple Vision Pro.' },
+  { id: 'appleintel', label: 'Apple Intelligence', cat: 'software', url: 'https://en.wikipedia.org/wiki/Apple_Intelligence', desc: 'Apple\u2019s personal AI layer across iPhone, iPad, and Mac, introduced at WWDC 2024.' },
+  // Developer tools
+  { id: 'xcode15', label: 'Xcode 15', cat: 'developer', url: 'https://developer.apple.com/documentation/xcode-release-notes/xcode-15-release-notes', desc: 'The IDE release that added the visionOS SDK and predictive code completion.' },
+  { id: 'xcode16', label: 'Xcode 16', cat: 'developer', url: 'https://developer.apple.com/documentation/xcode-release-notes/xcode-16-release-notes', desc: 'Ships Swift 6 and on-device predictive completion powered by Apple silicon.' },
+  { id: 'swift',   label: 'Swift',    cat: 'developer', url: 'https://developer.apple.com/swift/', desc: 'Apple\u2019s open-source language for every platform in this graph.' },
+  { id: 'swiftui', label: 'SwiftUI',  cat: 'developer', url: 'https://developer.apple.com/xcode/swiftui/', desc: 'Declarative UI framework spanning iOS, macOS, watchOS, and visionOS.' },
+];
+
+const EDGES = [
+  ['wwdc23', 'ios17', 'announced'],
+  ['wwdc23', 'sonoma', 'announced'],
+  ['wwdc23', 'watchos10', 'announced'],
+  ['wwdc23', 'visionos', 'announced'],
+  ['wwdc23', 'visionpro', 'unveiled'],
+  ['wwdc23', 'xcode15', 'announced'],
+  ['wonderlust', 'iphone15', 'introduced'],
+  ['wonderlust', 'iphone15pro', 'introduced'],
+  ['wonderlust', 'watchs9', 'introduced'],
+  ['iphone15', 'ios17', 'ships with'],
+  ['iphone15pro', 'ios17', 'ships with'],
+  ['iphone15pro', 'a17pro', 'powered by'],
+  ['watchs9', 'watchos10', 'runs'],
+  ['visionpro', 'visionos', 'runs'],
+  ['xcode15', 'swift', 'compiles'],
+  ['xcode15', 'swiftui', 'includes'],
+  ['xcode15', 'visionos', 'SDK for'],
+  ['swiftui', 'swift', 'built on'],
+  ['wwdc24', 'ios18', 'announced'],
+  ['wwdc24', 'appleintel', 'introduced'],
+  ['wwdc24', 'xcode16', 'announced'],
+  ['glowtime', 'iphone16', 'introduced'],
+  ['glowtime', 'a18', 'introduced'],
+  ['iphone16', 'ios18', 'ships with'],
+  ['iphone16', 'a18', 'powered by'],
+  ['iphone16', 'appleintel', 'built for'],
+  ['ios18', 'appleintel', 'enables'],
+  ['xcode16', 'swift', 'ships Swift 6'],
+];
+
+// ---------- Build legend ----------
+const legendEl = document.getElementById('legend');
+Object.values(CATEGORY).forEach(c => {
+  const pill = document.createElement('span');
+  pill.className = 'legend-pill';
+  pill.innerHTML = `<span class="legend-dot" style="background:${c.color}"><img src="${iconUri(c.icon)}" alt=""></span>${c.label}`;
+  legendEl.appendChild(pill);
+});
+
+// ---------- Semantic layout: chronological x-axis + category swimlanes ----------
+const EVENT_X = { wwdc23: 0, wonderlust: 1, wwdc24: 2.15, glowtime: 3.15 };
+const LANE_ORDER = ['silicon', 'device', 'event', 'software', 'developer'];
+const X_SCALE = 270, LANE_GAP = 165, MIN_GAP = 135, STAGGER = 26;
+
+function computePositions() {
+  const adj = {};
+  NODES.forEach(n => { adj[n.id] = []; });
+  EDGES.forEach(([s, t]) => { adj[s].push(t); adj[t].push(s); });
+
+  // 1. Pin events chronologically
+  const x = {};
+  NODES.filter(n => n.cat === 'event').forEach(n => { x[n.id] = EVENT_X[n.id] * X_SCALE; });
+
+  // 2. Propagate x outward: each node averages its already-placed neighbors
+  let pending = NODES.filter(n => !(n.id in x)).map(n => n.id);
+  while (pending.length) {
+    const next = [];
+    let progressed = false;
+    for (const id of pending) {
+      const known = adj[id].filter(m => m in x);
+      if (known.length) { x[id] = known.reduce((a, m) => a + x[m], 0) / known.length; progressed = true; }
+      else next.push(id);
+    }
+    if (!progressed) { next.forEach(id => { x[id] = 0; }); break; }
+    pending = next;
+  }
+
+  // 3. Within each lane, spread colliding clusters symmetrically around their anchor
+  const lanes = {};
+  NODES.forEach(n => { (lanes[n.cat] = lanes[n.cat] || []).push(n.id); });
+  Object.values(lanes).forEach(ids => {
+    ids.sort((a, b) => x[a] - x[b]);
+    let group = [ids];
+    const flush = () => {
+      if (group.length > 1) {
+        const mean = group.reduce((a, id) => a + x[id], 0) / group.length;
+        group.forEach((id, i) => { x[id] = mean + (i - (group.length - 1) / 2) * MIN_GAP; });
+      }
+      group = [];
+    };
+    for (let i = 1; i < ids.length; i++) {
+      if (x[ids[i]] - x[ids[i - 1]] < MIN_GAP) group.push(ids[i]);
+      else { flush(); group = [ids[i]]; }
+    }
+    flush();
+    // final left-to-right pass in case spread groups now touch
+    for (let i = 1; i < ids.length; i++) {
+      if (x[ids[i]] - x[ids[i - 1]] < MIN_GAP) x[ids[i]] = x[ids[i - 1]] + MIN_GAP;
+    }
+  });
+
+  // 4. Assign lane y; stagger non-event lanes slightly so labels never collide
+  const pos = {};
+  Object.entries(lanes).forEach(([cat, ids]) => {
+    const laneY = LANE_ORDER.indexOf(cat) * LANE_GAP;
+    ids.forEach((id, i) => {
+      pos[id] = { x: x[id], y: laneY + (cat === 'event' ? 0 : (i % 2 ? STAGGER : -STAGGER)) };
+    });
+  });
+  return pos;
+}
+
+const POSITIONS = computePositions();
+
+// Faint lane captions, rendered as locked text-only nodes so they pan/zoom with the graph
+const LANE_LABELS = LANE_ORDER.map(cat => ({
+  data: { id: 'lane-' + cat, label: CATEGORY[cat].label.toUpperCase() + 'S', laneLabel: 1 },
+  position: { x: -0.85 * X_SCALE, y: LANE_ORDER.indexOf(cat) * LANE_GAP },
+  selectable: false, grabbable: false,
+}));
+
+// ---------- Calculate Year Labels ----------
+const YEARS = [
+  { id: '2023', events: ['wwdc23', 'wonderlust'] },
+  { id: '2024', events: ['wwdc24', 'glowtime'] }
+];
+
+const YEAR_LABELS = YEARS.map(year => {
+  const eventXs = year.events.map(e => POSITIONS[e].x);
+  const midX = (Math.min(...eventXs) + Math.max(...eventXs)) / 2;
+
+  return {
+    data: { id: 'year-' + year.id, label: year.id, yearLabel: 1 },
+    position: { x: midX, y: -90 }, // Set just above the top edge of the nodes
+    selectable: false, 
+    grabbable: false
+  };
+});
+
+// ---------- Cytoscape ----------
+const cy = cytoscape({
+  container: document.getElementById('cy'),
+  elements: [
+    ...YEAR_LABELS,
+    ...NODES.map(n => {
+      const icon = NODE_ICONS[n.id] || CATEGORY[n.cat].icon;
+      return {
+        data: { ...n, color: CATEGORY[n.cat].color, icon, iconUrl: iconUri(icon) },
+        position: { ...POSITIONS[n.id] },
+      };
+    }),
+    ...LANE_LABELS,
+    ...EDGES.map(([s, t, rel], i) => ({ data: { id: 'e' + i, source: s, target: t, rel } })),
+  ],
+  style: [
+    { selector: 'node', style: {
+        'z-index': 10,
+        'background-color': 'data(color)',
+        'label': 'data(label)',
+        'color': 'rgba(255,255,255,0.88)',
+        'font-family': '-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif',
+        'font-size': 11,
+        'font-weight': 600,
+        'text-valign': 'bottom',
+        'text-margin-y': 7,
+        'width': 36, 'height': 36,
+        'background-image': 'data(iconUrl)',
+        'background-width': '55%',
+        'background-height': '55%',
+        'border-width': 0,
+        'text-outline-color': '#050507',
+        'text-outline-width': 2,
+        'transition-property': 'opacity, width, height, border-width',
+        'transition-duration': '180ms',
+    }},
+    { selector: 'node[laneLabel]', style: {
+        'background-opacity': 0,
+        'background-image-opacity': 0,
+        'width': 1, 'height': 1,
+        'label': 'data(label)',
+        'font-size': 10,
+        'font-weight': 700,
+        'color': 'rgba(255,255,255,0.22)',
+        'text-valign': 'center',
+        'text-halign': 'left',
+        'text-margin-y': 0,
+        'text-outline-width': 0,
+        'events': 'no',
+    }},
+    { selector: 'node[yearLabel]', style: {
+        'background-opacity': 0,
+        'background-image-opacity': 0,
+        'width': 1, 'height': 1,
+        'label': 'data(label)',
+        'font-size': 14,
+        'font-weight': 700,
+        'color': 'rgba(255,255,255,0.22)',
+        'text-valign': 'top',
+        'text-halign': 'center',
+        'text-margin-y': 0,
+        'text-outline-width': 0,
+        'events': 'no',
+    }},
+    { selector: 'edge', style: {
+        'z-index': 5,
+        'width': 1.5,
+        'line-color': 'rgba(255,255,255,0.16)',
+        'opacity': 0.15,
+        'curve-style': 'bezier',
+        'transition-property': 'opacity, line-color, width',
+        'transition-duration': '180ms',
+    }},
+    { selector: '.dimmed', style: { 'opacity': 0.10, 'text-opacity': 0.0 } },
+    { selector: 'node.highlighted', style: { 'border-width': 2, 'border-color': 'rgba(255,255,255,0.7)' } },
+    { selector: 'node.focus', style: {
+        'width': 50, 'height': 50,
+        'border-width': 3, 'border-color': '#ffffff',
+        'font-size': 13,
+    }},
+    { selector: 'edge.highlighted', style: {
+        'opacity': 1.0,
+        'line-color': 'rgba(255,255,255,0.65)',
+        'width': 2.5,
+        'label': 'data(rel)',
+        'font-size': 9.5,
+        'color': 'rgba(255,255,255,0.65)',
+        'text-rotation': 'autorotate',
+        'text-outline-color': '#050507',
+        'text-outline-width': 2,
+    }},
+  ],
+  layout: { name: 'preset', padding: 70 },
+  wheelSensitivity: 0.25,
+});
+
+// ---------- Selection / highlighting ----------
+const panel = document.getElementById('panel');
+const panelBody = document.getElementById('panelBody');
+let selectedId = null;
+
+function clearSelection() {
+  selectedId = null;
+  cy.elements().removeClass('dimmed highlighted focus');
+  panel.classList.remove('visible');
+}
+
+function selectNode(node) {
+  selectedId = node.id();
+  const hood = node.closedNeighborhood(); // node + direct edges + adjacent nodes
+
+  cy.elements().addClass('dimmed').removeClass('highlighted focus');
+  hood.removeClass('dimmed').addClass('highlighted');
+  node.addClass('focus');
+
+  renderPanel(node);
+  panel.classList.add('visible');
+}
+
+function renderPanel(node) {
+  const d = node.data();
+  const cat = CATEGORY[d.cat];
+  const neighbors = node.connectedEdges().map(e => {
+    const other = e.source().id() === d.id ? e.target() : e.source();
+    return { node: other, rel: e.data('rel') };
+  });
+
+  panelBody.innerHTML = `
+    <span class="badge" style="color:${cat.color}">
+      <span class="legend-dot" style="background:${cat.color}"><img src="${iconUri(d.icon)}" alt=""></span>${cat.label}
+    </span>
+    <h2>${d.label}</h2>
+    <p class="desc">${d.desc}</p>
+    <a class="open-link" style="--accent:${cat.color}" href="${d.url}" target="_blank" rel="noopener noreferrer">Open page&nbsp;↗</a>
+    <div class="connections-label">${neighbors.length} connection${neighbors.length === 1 ? '' : 's'}</div>
+    <div id="neighborList"></div>
+  `;
+
+  const list = panelBody.querySelector('#neighborList');
+  neighbors.forEach(({ node: n, rel }) => {
+    const btn = document.createElement('button');
+    btn.className = 'neighbor-btn';
+    btn.innerHTML = `<span class="legend-dot" style="background:${n.data('color')}"><img src="${n.data('iconUrl')}" alt=""></span>
+                     <span>${n.data('label')}</span>
+                     <span class="neighbor-rel">${rel}</span>`;
+    btn.addEventListener('click', () => {
+      selectNode(n);
+      cy.animate({ center: { eles: n }, duration: 280, easing: 'ease-in-out-cubic' });
+    });
+    list.appendChild(btn);
+  });
+}
+
+// Single tap: highlight + panel
+cy.on('tap', 'node', evt => { if (!evt.target.data('yearLabel') && !evt.target.data('laneLabel')) selectNode(evt.target); });
+
+// Double tap: open the node's URL in a new tab (user-initiated, so popup blockers allow it)
+cy.on('dbltap', 'node', evt => {
+  const url = evt.target.data('url');
+  if (url) window.open(url, '_blank', 'noopener');
+});
+
+// Background tap: reset
+cy.on('tap', evt => { if (evt.target === cy) clearSelection(); });
+
+// Hover affordance
+cy.on('mouseover', 'node', evt => { if (!evt.target.data('yearLabel') && !evt.target.data('laneLabel')) document.body.style.cursor = 'pointer'; });
+cy.on('mouseout', 'node', () => { document.body.style.cursor = 'default'; });
+
+document.getElementById('panelClose').addEventListener('click', clearSelection);
+document.addEventListener('keydown', e => { if (e.key === 'Escape') clearSelection(); });
+
+// Fit nicely on load
+cy.ready(() => cy.fit(undefined, 70));
+window.addEventListener('resize', () => cy.resize());
+</script>
+</body>
+</html>
