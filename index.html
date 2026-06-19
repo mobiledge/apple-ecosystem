@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>The Apple Ecosystem — Interactive Graph</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.28.1/cytoscape.min.js"></script>
+<!-- fcose: force-directed layout that honours relative placement/alignment constraints -->
+<script src="https://unpkg.com/layout-base@2.0.1/layout-base.js"></script>
+<script src="https://unpkg.com/cose-base@2.2.0/cose-base.js"></script>
+<script src="https://unpkg.com/cytoscape-fcose@2.2.0/cytoscape-fcose.js"></script>
 <style>
   :root {
     --bg-deep: #050507;
@@ -223,9 +227,13 @@ const NODES = [
   { id: 'ios27',    label: 'iOS 27',             cat: 'software', url: 'https://en.wikipedia.org/wiki/IOS_27', desc: 'The 2026 update focused on speed, with faster Photos, AirDrop, and multitasking.' },
   { id: 'goldengate', label: 'macOS Golden Gate', cat: 'software', url: 'https://en.wikipedia.org/wiki/MacOS', desc: 'macOS 27, the first Apple-silicon-only Mac release, tuned for stability and Siri.' },
   // Developer tools
-  { id: 'xcode26', label: 'Xcode 26', cat: 'developer', url: 'https://developer.apple.com/documentation/xcode-release-notes/xcode-26-release-notes', desc: 'Adds the Foundation Models SDK and AI-assisted coding intelligence.' },
+  { id: 'xcode163', label: 'Xcode 16.3', cat: 'developer', url: 'https://developer.apple.com/documentation/xcode-release-notes/xcode-16_3-release-notes', desc: 'Released 31 March 2025, the last release before the ’26’ rename; ships Swift 6.1.' },
+  { id: 'xcode26', label: 'Xcode 26', cat: 'developer', url: 'https://developer.apple.com/documentation/xcode-release-notes/xcode-26-release-notes', desc: 'Released 15 September 2025 with the Foundation Models SDK and AI-assisted coding; ships Swift 6.2.' },
+  { id: 'xcode264', label: 'Xcode 26.4', cat: 'developer', url: 'https://developer.apple.com/documentation/xcode-release-notes/xcode-26_4-release-notes', desc: 'Released 24 March 2026; ships Swift 6.3.' },
   { id: 'xcode27', label: 'Xcode 27', cat: 'developer', url: 'https://developer.apple.com/documentation/xcode-release-notes/xcode-27-release-notes', desc: 'A redesigned, customizable toolbar with a built-in coding agent and multi-model Swift Assist.' },
-  { id: 'swift',   label: 'Swift',    cat: 'developer', url: 'https://developer.apple.com/swift/', desc: 'Apple\u2019s open-source language; Xcode 26 ships Swift 6.1 and Xcode 27 ships Swift 6.2.' },
+  { id: 'swift61', label: 'Swift 6.1', cat: 'developer', url: 'https://developer.apple.com/swift/', desc: 'Released with Xcode 16.3 on 31 March 2025; brings concurrency refinements and expanded Swift Testing support.' },
+  { id: 'swift62', label: 'Swift 6.2', cat: 'developer', url: 'https://developer.apple.com/swift/', desc: 'Released with Xcode 26 on 15 September 2025; adds approachable concurrency and broader Swift Testing support.' },
+  { id: 'swift63', label: 'Swift 6.3', cat: 'developer', url: 'https://developer.apple.com/swift/', desc: 'Released with Xcode 26.4 on 24 March 2026.' },
 ];
 
 const EDGES = [
@@ -267,9 +275,13 @@ const EDGES = [
 
   ['wwdc26', 'xcode27', 'announced'],
   // Developer
-  ['xcode26', 'swift', 'ships Swift 6.1'],
-
-  ['xcode27', 'swift', 'ships Swift 6.2'],
+  ['xcode163', 'swift61', 'ships'],
+  ['xcode26', 'swift62', 'ships'],
+  ['xcode264', 'swift63', 'ships'],
+  // Xcode version lineage (keeps point releases anchored on the timeline)
+  ['xcode163', 'xcode26', 'succeeded by'],
+  ['xcode26', 'xcode264', 'succeeded by'],
+  ['xcode264', 'xcode27', 'succeeded by'],
 ];
 
 // ---------- Build legend ----------
@@ -281,109 +293,34 @@ Object.values(CATEGORY).forEach(c => {
   legendEl.appendChild(pill);
 });
 
-// ---------- Semantic layout: chronological x-axis + category swimlanes ----------
-const EVENT_X = { wwdc26: 0, m5launch: 1.35, awedropping: 2.2, wwdc25: 3.2 };
-const LANE_ORDER = ['event', 'device', 'silicon', 'software', 'developer'];
-const X_SCALE = 270, LANE_GAP = 165, MIN_GAP = 135, STAGGER = 26;
+// ---------- Layout preferences (relative, not absolute) ----------
+cytoscape.use(cytoscapeFcose);
 
-function computePositions() {
-  const adj = {};
-  NODES.forEach(n => { adj[n.id] = []; });
-  EDGES.forEach(([s, t]) => { adj[s].push(t); adj[t].push(s); });
+// Events ordered latest -> earliest, which maps to left -> right on screen.
+const EVENT_ORDER = ['wwdc26', 'm5launch', 'awedropping', 'wwdc25'];
+const NON_EVENT_IDS = NODES.filter(n => n.cat !== 'event').map(n => n.id);
 
-  // 1. Pin events chronologically
-  const x = {};
-  NODES.filter(n => n.cat === 'event').forEach(n => { x[n.id] = EVENT_X[n.id] * X_SCALE; });
-
-  // 2. Propagate x outward: each node averages its already-placed neighbors
-  let pending = NODES.filter(n => !(n.id in x)).map(n => n.id);
-  while (pending.length) {
-    const next = [];
-    let progressed = false;
-    for (const id of pending) {
-      const known = adj[id].filter(m => m in x);
-      if (known.length) { x[id] = known.reduce((a, m) => a + x[m], 0) / known.length; progressed = true; }
-      else next.push(id);
-    }
-    if (!progressed) { next.forEach(id => { x[id] = 0; }); break; }
-    pending = next;
-  }
-
-  // 3. Within each lane, spread colliding clusters symmetrically around their anchor
-  const lanes = {};
-  NODES.forEach(n => { (lanes[n.cat] = lanes[n.cat] || []).push(n.id); });
-  Object.values(lanes).forEach(ids => {
-    ids.sort((a, b) => x[a] - x[b]);
-    let group = [ids];
-    const flush = () => {
-      if (group.length > 1) {
-        const mean = group.reduce((a, id) => a + x[id], 0) / group.length;
-        group.forEach((id, i) => { x[id] = mean + (i - (group.length - 1) / 2) * MIN_GAP; });
-      }
-      group = [];
-    };
-    for (let i = 1; i < ids.length; i++) {
-      if (x[ids[i]] - x[ids[i - 1]] < MIN_GAP) group.push(ids[i]);
-      else { flush(); group = [ids[i]]; }
-    }
-    flush();
-    // final left-to-right pass in case spread groups now touch
-    for (let i = 1; i < ids.length; i++) {
-      if (x[ids[i]] - x[ids[i - 1]] < MIN_GAP) x[ids[i]] = x[ids[i - 1]] + MIN_GAP;
-    }
-  });
-
-  // 4. Assign lane y; stagger non-event lanes slightly so labels never collide
-  const pos = {};
-  Object.entries(lanes).forEach(([cat, ids]) => {
-    const laneY = LANE_ORDER.indexOf(cat) * LANE_GAP;
-    ids.forEach((id, i) => {
-      pos[id] = { x: x[id], y: laneY + (cat === 'event' ? 0 : (i % 2 ? STAGGER : -STAGGER)) };
-    });
-  });
-  return pos;
-}
-
-const POSITIONS = computePositions();
-
-// Faint lane captions, rendered as locked text-only nodes so they pan/zoom with the graph
-const LANE_LABELS = LANE_ORDER.map(cat => ({
-  data: { id: 'lane-' + cat, label: CATEGORY[cat].label.toUpperCase() + 'S', laneLabel: 1 },
-  position: { x: -0.85 * X_SCALE, y: LANE_ORDER.indexOf(cat) * LANE_GAP },
-  selectable: false, grabbable: false,
-}));
-
-// ---------- Calculate Year Labels ----------
-const YEARS = [
-  { id: '2025', events: ['wwdc25', 'awedropping', 'm5launch'] },
-  { id: '2026', events: ['wwdc26'] }
-];
-
-const YEAR_LABELS = YEARS.map(year => {
-  const eventXs = year.events.map(e => POSITIONS[e].x);
-  const midX = (Math.min(...eventXs) + Math.max(...eventXs)) / 2;
-
-  return {
-    data: { id: 'year-' + year.id, label: year.id, yearLabel: 1 },
-    position: { x: midX, y: -90 }, // Set just above the top edge of the nodes
-    selectable: false, 
-    grabbable: false
-  };
-});
+const LAYOUT_CONSTRAINTS = {
+  // keep all events on one horizontal line
+  alignmentConstraint: { horizontal: [EVENT_ORDER] },
+  relativePlacementConstraint: [
+    // later events sit to the left of earlier ones
+    ...EVENT_ORDER.slice(1).map((id, i) => ({ left: EVENT_ORDER[i], right: id, gap: 160 })),
+    // every event sits above every other node (one ref event suffices since events are aligned)
+    ...NON_EVENT_IDS.map(id => ({ top: EVENT_ORDER[0], bottom: id, gap: 120 })),
+  ],
+};
 
 // ---------- Cytoscape ----------
 const cy = cytoscape({
   container: document.getElementById('cy'),
   elements: [
-    ...YEAR_LABELS,
     ...NODES.map(n => {
       const icon = NODE_ICONS[n.id] || CATEGORY[n.cat].icon;
       return {
         data: { ...n, color: CATEGORY[n.cat].color, icon, iconUrl: iconUri(icon) },
-        position: { ...POSITIONS[n.id] },
       };
     }),
-    ...LANE_LABELS,
     ...EDGES.map(([s, t, rel], i) => ({ data: { id: 'e' + i, source: s, target: t, rel } })),
   ],
   style: [
@@ -406,34 +343,6 @@ const cy = cytoscape({
         'text-outline-width': 2,
         'transition-property': 'opacity, width, height, border-width',
         'transition-duration': '180ms',
-    }},
-    { selector: 'node[laneLabel]', style: {
-        'background-opacity': 0,
-        'background-image-opacity': 0,
-        'width': 1, 'height': 1,
-        'label': 'data(label)',
-        'font-size': 10,
-        'font-weight': 700,
-        'color': 'rgba(255,255,255,0.22)',
-        'text-valign': 'center',
-        'text-halign': 'left',
-        'text-margin-y': 0,
-        'text-outline-width': 0,
-        'events': 'no',
-    }},
-    { selector: 'node[yearLabel]', style: {
-        'background-opacity': 0,
-        'background-image-opacity': 0,
-        'width': 1, 'height': 1,
-        'label': 'data(label)',
-        'font-size': 14,
-        'font-weight': 700,
-        'color': 'rgba(255,255,255,0.22)',
-        'text-valign': 'top',
-        'text-halign': 'center',
-        'text-margin-y': 0,
-        'text-outline-width': 0,
-        'events': 'no',
     }},
     { selector: 'edge', style: {
         'z-index': 5,
@@ -463,7 +372,7 @@ const cy = cytoscape({
         'text-outline-width': 2,
     }},
   ],
-  layout: { name: 'preset', padding: 70 },
+  layout: { name: 'fcose', quality: 'proof', randomize: true, animate: false, padding: 70, ...LAYOUT_CONSTRAINTS },
   wheelSensitivity: 0.25,
 });
 
@@ -525,7 +434,7 @@ function renderPanel(node) {
 }
 
 // Single tap: highlight + panel
-cy.on('tap', 'node', evt => { if (!evt.target.data('yearLabel') && !evt.target.data('laneLabel')) selectNode(evt.target); });
+cy.on('tap', 'node', evt => selectNode(evt.target));
 
 // Double tap: open the node's URL in a new tab (user-initiated, so popup blockers allow it)
 cy.on('dbltap', 'node', evt => {
@@ -537,7 +446,7 @@ cy.on('dbltap', 'node', evt => {
 cy.on('tap', evt => { if (evt.target === cy) clearSelection(); });
 
 // Hover affordance
-cy.on('mouseover', 'node', evt => { if (!evt.target.data('yearLabel') && !evt.target.data('laneLabel')) document.body.style.cursor = 'pointer'; });
+cy.on('mouseover', 'node', () => { document.body.style.cursor = 'pointer'; });
 cy.on('mouseout', 'node', () => { document.body.style.cursor = 'default'; });
 
 document.getElementById('panelClose').addEventListener('click', clearSelection);
