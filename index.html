@@ -179,9 +179,11 @@ const ICON_SVG = {
 
 // Per-node overrides; everything else falls back to its category's icon
 const NODE_ICONS = {
-  watchs9: 'watch',
-  visionpro: 'vision',
+  watchs11: 'watch',
+  watchultra3: 'watch',
+  visionprom5: 'vision',
   appleintel: 'sparkle',
+  siri: 'sparkle',
 };
 
 function iconUri(name, color = '#ffffff') {
@@ -191,62 +193,92 @@ function iconUri(name, color = '#ffffff') {
 
 const NODES = [
   // Events
-  { id: 'wwdc23',     label: 'WWDC 2023',            cat: 'event',     url: 'https://en.wikipedia.org/wiki/Worldwide_Developers_Conference', desc: 'Apple\u2019s developer conference where visionOS, iOS 17, and Apple Vision Pro were unveiled.' },
-  { id: 'wonderlust', label: 'Wonderlust (Sep 2023)', cat: 'event',     url: 'https://en.wikipedia.org/wiki/IPhone_15', desc: 'September 2023 keynote introducing the iPhone 15 lineup and Apple Watch Series 9.' },
-  { id: 'wwdc24',     label: 'WWDC 2024',            cat: 'event',     url: 'https://en.wikipedia.org/wiki/Worldwide_Developers_Conference', desc: 'The 2024 keynote centered on Apple Intelligence, iOS 18, and Xcode 16.' },
-  { id: 'glowtime',   label: 'Glowtime (Sep 2024)',  cat: 'event',     url: 'https://en.wikipedia.org/wiki/IPhone_16', desc: 'September 2024 event debuting the iPhone 16 family and the A18 chip.' },
+  { id: 'wwdc25',      label: 'WWDC 2025',            cat: 'event',     url: 'https://en.wikipedia.org/wiki/Worldwide_Developers_Conference', desc: 'June 2025 keynote that introduced the Liquid Glass design, the unified \u201926\u2019 naming, and the Foundation Models framework.' },
+  { id: 'awedropping', label: 'Awe Dropping (Sep 2025)', cat: 'event', url: 'https://en.wikipedia.org/wiki/IPhone_17', desc: 'September 2025 event debuting the iPhone 17 line, iPhone Air, Apple Watch Series 11 and Ultra 3, and AirPods Pro 3.' },
+  { id: 'm5launch',    label: 'M5 Launch (Oct 2025)', cat: 'event',     url: 'https://www.apple.com/newsroom/2025/10/apple-introduces-the-powerful-new-ipad-pro-with-the-m5-chip/', desc: 'October 2025 release of the M5 chip across the new iPad Pro, MacBook Pro, and Apple Vision Pro.' },
+  { id: 'wwdc26',      label: 'WWDC 2026',            cat: 'event',     url: 'https://en.wikipedia.org/wiki/Worldwide_Developers_Conference', desc: 'June 2026 keynote centered on the rebuilt Siri, iOS 27, and macOS 27 Golden Gate.' },
   // Devices
-  { id: 'iphone15',    label: 'iPhone 15',          cat: 'device',    url: 'https://en.wikipedia.org/wiki/IPhone_15', desc: 'Apple\u2019s 2023 flagship phone, the first base model with USB-C and the Dynamic Island.' },
-  { id: 'iphone15pro', label: 'iPhone 15 Pro',      cat: 'device',    url: 'https://en.wikipedia.org/wiki/IPhone_15_Pro', desc: 'Titanium-bodied Pro model powered by the A17 Pro, Apple\u2019s first 3 nm phone chip.' },
-  { id: 'iphone16',    label: 'iPhone 16',          cat: 'device',    url: 'https://en.wikipedia.org/wiki/IPhone_16', desc: 'The 2024 iPhone, built around Apple Intelligence with the new Camera Control.' },
-  { id: 'watchs9',     label: 'Apple Watch S9',     cat: 'device',    url: 'https://en.wikipedia.org/wiki/Apple_Watch_Series_9', desc: 'Adds the S9 chip and the Double Tap gesture, announced alongside iPhone 15.' },
-  { id: 'visionpro',   label: 'Apple Vision Pro',   cat: 'device',    url: 'https://en.wikipedia.org/wiki/Apple_Vision_Pro', desc: 'Apple\u2019s spatial computer, unveiled at WWDC 2023 and shipped in early 2024.' },
+  { id: 'iphone17',    label: 'iPhone 17',          cat: 'device',    url: 'https://en.wikipedia.org/wiki/IPhone_17', desc: 'The 2025 base iPhone, powered by the A19 with a 120Hz ProMotion display.' },
+  { id: 'iphone17pro', label: 'iPhone 17 Pro',      cat: 'device',    url: 'https://en.wikipedia.org/wiki/IPhone_17_Pro', desc: 'Aluminum unibody Pro model running the A19 Pro with a new vapor-chamber cooling system.' },
+  { id: 'iphoneair',   label: 'iPhone Air',         cat: 'device',    url: 'https://en.wikipedia.org/wiki/IPhone_Air', desc: 'Apple\u2019s thinnest iPhone at 5.6 mm, with a titanium frame and the A19 Pro.' },
+  { id: 'watchs11',    label: 'Apple Watch S11',    cat: 'device',    url: 'https://en.wikipedia.org/wiki/Apple_Watch_Series_11', desc: 'Adds 5G and a tougher scratch-resistant coating; runs watchOS 26.' },
+  { id: 'watchultra3', label: 'Apple Watch Ultra 3', cat: 'device',   url: 'https://en.wikipedia.org/wiki/Apple_Watch_Ultra_3', desc: 'Gains satellite messaging, 5G, and the largest Apple Watch display yet.' },
+  { id: 'airpodspro3', label: 'AirPods Pro 3',      cat: 'device',    url: 'https://en.wikipedia.org/wiki/AirPods_Pro', desc: 'Redesigned earbuds adding live translation and heart-rate sensing.' },
+  { id: 'ipadprom5',   label: 'iPad Pro (M5)',      cat: 'device',    url: 'https://en.wikipedia.org/wiki/IPad_Pro', desc: 'Late-2025 iPad Pro with the M5 chip and up to 3.5x the AI performance of M4.' },
+  { id: 'visionprom5', label: 'Apple Vision Pro',   cat: 'device',    url: 'https://en.wikipedia.org/wiki/Apple_Vision_Pro', desc: 'Refreshed spatial computer upgraded to the M5 chip and a new Dual Knit comfort band.' },
   // Silicon
-  { id: 'a17pro', label: 'A17 Pro', cat: 'silicon', url: 'https://en.wikipedia.org/wiki/Apple_A17', desc: 'The first 3-nanometer smartphone SoC, with hardware ray tracing.' },
-  { id: 'a18',    label: 'A18',     cat: 'silicon', url: 'https://en.wikipedia.org/wiki/Apple_A18', desc: 'The chip behind iPhone 16, tuned for on-device Apple Intelligence models.' },
+  { id: 'a19',    label: 'A19',     cat: 'silicon', url: 'https://en.wikipedia.org/wiki/Apple_A19', desc: 'The 2025 3 nm SoC powering the iPhone 17, paired with Apple\u2019s N1 wireless chip.' },
+  { id: 'a19pro', label: 'A19 Pro', cat: 'silicon', url: 'https://en.wikipedia.org/wiki/Apple_A19', desc: 'The higher-end A19 in the iPhone 17 Pro and iPhone Air, with near desktop-class GPU power.' },
+  { id: 'm5',     label: 'M5',      cat: 'silicon', url: 'https://en.wikipedia.org/wiki/Apple_M5', desc: 'Third-gen 3 nm Mac and iPad chip with a Neural Accelerator in every GPU core.' },
   // Software
-  { id: 'ios17',    label: 'iOS 17',             cat: 'software', url: 'https://en.wikipedia.org/wiki/IOS_17', desc: 'Brought StandBy, Contact Posters, and interactive widgets to iPhone.' },
-  { id: 'ios18',    label: 'iOS 18',             cat: 'software', url: 'https://en.wikipedia.org/wiki/IOS_18', desc: 'Introduced deep customization and serves as the foundation for Apple Intelligence.' },
-  { id: 'sonoma',   label: 'macOS Sonoma',       cat: 'software', url: 'https://en.wikipedia.org/wiki/MacOS_Sonoma', desc: 'The 2023 Mac release with desktop widgets and Game Mode.' },
-  { id: 'watchos10',label: 'watchOS 10',         cat: 'software', url: 'https://en.wikipedia.org/wiki/WatchOS', desc: 'A redesign of watchOS around full-screen Smart Stack widgets.' },
-  { id: 'visionos', label: 'visionOS',           cat: 'software', url: 'https://en.wikipedia.org/wiki/VisionOS', desc: 'The spatial operating system that powers Apple Vision Pro.' },
-  { id: 'appleintel', label: 'Apple Intelligence', cat: 'software', url: 'https://en.wikipedia.org/wiki/Apple_Intelligence', desc: 'Apple\u2019s personal AI layer across iPhone, iPad, and Mac, introduced at WWDC 2024.' },
+  { id: 'ios26',    label: 'iOS 26',             cat: 'software', url: 'https://en.wikipedia.org/wiki/IOS_26', desc: 'The first release with the Liquid Glass design and the year-based \u201926\u2019 naming.' },
+  { id: 'tahoe26',  label: 'macOS Tahoe 26',     cat: 'software', url: 'https://en.wikipedia.org/wiki/MacOS_Tahoe', desc: 'The 2025 Mac release bringing Liquid Glass and the Phone app to the desktop.' },
+  { id: 'watchos26',label: 'watchOS 26',         cat: 'software', url: 'https://en.wikipedia.org/wiki/WatchOS', desc: 'Adds the Liquid Glass look and a Workout Buddy powered by Apple Intelligence.' },
+  { id: 'visionos26', label: 'visionOS 26',      cat: 'software', url: 'https://en.wikipedia.org/wiki/VisionOS', desc: 'Brings spatial widgets and persistent Personas to Apple Vision Pro.' },
+  { id: 'ios27',    label: 'iOS 27',             cat: 'software', url: 'https://en.wikipedia.org/wiki/IOS_27', desc: 'The 2026 update focused on speed, with faster Photos, AirDrop, and multitasking.' },
+  { id: 'goldengate', label: 'macOS Golden Gate', cat: 'software', url: 'https://en.wikipedia.org/wiki/MacOS', desc: 'macOS 27, the first Apple-silicon-only Mac release, tuned for stability and Siri.' },
+  { id: 'appleintel', label: 'Apple Intelligence', cat: 'software', url: 'https://en.wikipedia.org/wiki/Apple_Intelligence', desc: 'Apple\u2019s on-device AI layer, now opened to apps through the Foundation Models framework.' },
+  { id: 'siri',     label: 'Siri',               cat: 'software', url: 'https://en.wikipedia.org/wiki/Siri', desc: 'The 2026 rebuilt Siri with on-screen awareness and personal-context understanding.' },
   // Developer tools
-  { id: 'xcode15', label: 'Xcode 15', cat: 'developer', url: 'https://developer.apple.com/documentation/xcode-release-notes/xcode-15-release-notes', desc: 'The IDE release that added the visionOS SDK and predictive code completion.' },
-  { id: 'xcode16', label: 'Xcode 16', cat: 'developer', url: 'https://developer.apple.com/documentation/xcode-release-notes/xcode-16-release-notes', desc: 'Ships Swift 6 and on-device predictive completion powered by Apple silicon.' },
-  { id: 'swift',   label: 'Swift',    cat: 'developer', url: 'https://developer.apple.com/swift/', desc: 'Apple\u2019s open-source language for every platform in this graph.' },
+  { id: 'xcode26', label: 'Xcode 26', cat: 'developer', url: 'https://developer.apple.com/documentation/xcode-release-notes/xcode-26-release-notes', desc: 'Adds the Foundation Models SDK and AI-assisted coding intelligence.' },
+  { id: 'xcode27', label: 'Xcode 27', cat: 'developer', url: 'https://developer.apple.com/documentation/xcode-release-notes/xcode-27-release-notes', desc: 'A redesigned, customizable toolbar with a built-in coding agent and multi-model Swift Assist.' },
+  { id: 'swift',   label: 'Swift',    cat: 'developer', url: 'https://developer.apple.com/swift/', desc: 'Apple\u2019s open-source language, now at Swift 6.2 across every platform here.' },
   { id: 'swiftui', label: 'SwiftUI',  cat: 'developer', url: 'https://developer.apple.com/xcode/swiftui/', desc: 'Declarative UI framework spanning iOS, macOS, watchOS, and visionOS.' },
+  { id: 'foundationmodels', label: 'Foundation Models', cat: 'developer', url: 'https://developer.apple.com/documentation/foundationmodels', desc: 'Framework giving apps direct access to Apple\u2019s on-device large language models.' },
 ];
 
 const EDGES = [
-  ['wwdc23', 'ios17', 'announced'],
-  ['wwdc23', 'sonoma', 'announced'],
-  ['wwdc23', 'watchos10', 'announced'],
-  ['wwdc23', 'visionos', 'announced'],
-  ['wwdc23', 'visionpro', 'unveiled'],
-  ['wwdc23', 'xcode15', 'announced'],
-  ['wonderlust', 'iphone15', 'introduced'],
-  ['wonderlust', 'iphone15pro', 'introduced'],
-  ['wonderlust', 'watchs9', 'introduced'],
-  ['iphone15', 'ios17', 'ships with'],
-  ['iphone15pro', 'ios17', 'ships with'],
-  ['iphone15pro', 'a17pro', 'powered by'],
-  ['watchs9', 'watchos10', 'runs'],
-  ['visionpro', 'visionos', 'runs'],
-  ['xcode15', 'swift', 'compiles'],
-  ['xcode15', 'swiftui', 'includes'],
-  ['xcode15', 'visionos', 'SDK for'],
+  // WWDC 2025
+  ['wwdc25', 'ios26', 'announced'],
+  ['wwdc25', 'tahoe26', 'announced'],
+  ['wwdc25', 'watchos26', 'announced'],
+  ['wwdc25', 'visionos26', 'announced'],
+  ['wwdc25', 'xcode26', 'announced'],
+  ['wwdc25', 'foundationmodels', 'introduced'],
+  ['wwdc25', 'appleintel', 'expanded'],
+  // Awe Dropping (Sep 2025)
+  ['awedropping', 'iphone17', 'introduced'],
+  ['awedropping', 'iphone17pro', 'introduced'],
+  ['awedropping', 'iphoneair', 'introduced'],
+  ['awedropping', 'watchs11', 'introduced'],
+  ['awedropping', 'watchultra3', 'introduced'],
+  ['awedropping', 'airpodspro3', 'introduced'],
+  ['awedropping', 'a19', 'introduced'],
+  ['awedropping', 'a19pro', 'introduced'],
+  // M5 Launch (Oct 2025)
+  ['m5launch', 'm5', 'introduced'],
+  ['m5launch', 'ipadprom5', 'introduced'],
+  ['m5launch', 'visionprom5', 'introduced'],
+  // Device wiring
+  ['iphone17', 'a19', 'powered by'],
+  ['iphone17', 'ios26', 'ships with'],
+  ['iphone17pro', 'a19pro', 'powered by'],
+  ['iphone17pro', 'ios26', 'ships with'],
+  ['iphoneair', 'a19pro', 'powered by'],
+  ['iphoneair', 'ios26', 'ships with'],
+  ['watchs11', 'watchos26', 'runs'],
+  ['watchultra3', 'watchos26', 'runs'],
+  ['ipadprom5', 'm5', 'powered by'],
+  ['visionprom5', 'm5', 'powered by'],
+  ['visionprom5', 'visionos26', 'runs'],
+  // Software / AI
+  ['ios26', 'appleintel', 'enables'],
+  ['tahoe26', 'appleintel', 'enables'],
+  ['foundationmodels', 'appleintel', 'taps'],
+  // WWDC 2026
+  ['wwdc26', 'ios27', 'announced'],
+  ['wwdc26', 'goldengate', 'announced'],
+  ['wwdc26', 'siri', 'unveiled'],
+  ['wwdc26', 'xcode27', 'announced'],
+  ['ios27', 'siri', 'includes'],
+  ['goldengate', 'siri', 'brings'],
+  ['siri', 'appleintel', 'part of'],
+  // Developer
+  ['xcode26', 'swift', 'compiles'],
+  ['xcode26', 'swiftui', 'includes'],
+  ['xcode26', 'foundationmodels', 'SDK for'],
+  ['xcode27', 'swift', 'ships Swift 6.2'],
   ['swiftui', 'swift', 'built on'],
-  ['wwdc24', 'ios18', 'announced'],
-  ['wwdc24', 'appleintel', 'introduced'],
-  ['wwdc24', 'xcode16', 'announced'],
-  ['glowtime', 'iphone16', 'introduced'],
-  ['glowtime', 'a18', 'introduced'],
-  ['iphone16', 'ios18', 'ships with'],
-  ['iphone16', 'a18', 'powered by'],
-  ['iphone16', 'appleintel', 'built for'],
-  ['ios18', 'appleintel', 'enables'],
-  ['xcode16', 'swift', 'ships Swift 6'],
 ];
 
 // ---------- Build legend ----------
@@ -259,7 +291,7 @@ Object.values(CATEGORY).forEach(c => {
 });
 
 // ---------- Semantic layout: chronological x-axis + category swimlanes ----------
-const EVENT_X = { wwdc23: 0, wonderlust: 1, wwdc24: 2.15, glowtime: 3.15 };
+const EVENT_X = { wwdc25: 0, awedropping: 1, m5launch: 1.85, wwdc26: 3.2 };
 const LANE_ORDER = ['silicon', 'device', 'event', 'software', 'developer'];
 const X_SCALE = 270, LANE_GAP = 165, MIN_GAP = 135, STAGGER = 26;
 
@@ -332,8 +364,8 @@ const LANE_LABELS = LANE_ORDER.map(cat => ({
 
 // ---------- Calculate Year Labels ----------
 const YEARS = [
-  { id: '2023', events: ['wwdc23', 'wonderlust'] },
-  { id: '2024', events: ['wwdc24', 'glowtime'] }
+  { id: '2025', events: ['wwdc25', 'awedropping', 'm5launch'] },
+  { id: '2026', events: ['wwdc26'] }
 ];
 
 const YEAR_LABELS = YEARS.map(year => {
