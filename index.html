@@ -298,16 +298,24 @@ cytoscape.use(cytoscapeFcose);
 
 // Events ordered latest -> earliest, which maps to left -> right on screen.
 const EVENT_ORDER = ['wwdc26', 'm5launch', 'awedropping', 'wwdc25'];
-const NON_EVENT_IDS = NODES.filter(n => n.cat !== 'event').map(n => n.id);
+
+// Categories stacked top -> bottom in this order.
+const CATEGORY_ORDER = ['event', 'device', 'silicon', 'software', 'developer'];
+const idsByCat = Object.fromEntries(
+  CATEGORY_ORDER.map(c => [c, NODES.filter(n => n.cat === c).map(n => n.id)])
+);
 
 const LAYOUT_CONSTRAINTS = {
-  // keep all events on one horizontal line
-  alignmentConstraint: { horizontal: [EVENT_ORDER] },
+  // No hard alignment: categories are ordered top-to-bottom but nodes float within their band.
   relativePlacementConstraint: [
+    // every node of an upper category stays above every node of the next category down
+    ...CATEGORY_ORDER.slice(1).flatMap((c, i) =>
+      idsByCat[CATEGORY_ORDER[i]].flatMap(top =>
+        idsByCat[c].map(bottom => ({ top, bottom, gap: 60 }))
+      )
+    ),
     // later events sit to the left of earlier ones
     ...EVENT_ORDER.slice(1).map((id, i) => ({ left: EVENT_ORDER[i], right: id, gap: 160 })),
-    // every event sits above every other node (one ref event suffices since events are aligned)
-    ...NON_EVENT_IDS.map(id => ({ top: EVENT_ORDER[0], bottom: id, gap: 120 })),
   ],
 };
 
@@ -372,7 +380,13 @@ const cy = cytoscape({
         'text-outline-width': 2,
     }},
   ],
-  layout: { name: 'fcose', quality: 'proof', randomize: true, animate: false, padding: 70, ...LAYOUT_CONSTRAINTS },
+  layout: {
+    name: 'fcose', quality: 'proof', randomize: true, animate: false, padding: 70,
+    nodeDimensionsIncludeLabels: true, // count label boxes so wide labels don't collide
+    nodeSeparation: 160,               // min spacing between nodes in the same aligned band
+    nodeRepulsion: 9000,
+    ...LAYOUT_CONSTRAINTS,
+  },
   wheelSensitivity: 0.25,
 });
 
