@@ -151,6 +151,13 @@
 
 <div class="legend" id="legend"></div>
 
+<a href="https://github.com/mobiledge/apple-ecosystem" target="_blank" rel="noopener noreferrer" style="
+  position: absolute; bottom: 24px; right: 32px; z-index: 10;
+  font-size: 11.5px; font-weight: 500; text-decoration: none;
+  color: var(--text-tertiary);
+  transition: color 0.15s ease;
+" onmouseover="this.style.color='var(--text-secondary)'" onmouseout="this.style.color='var(--text-tertiary)'">GitHub ↗</a>
+
 <aside class="panel" id="panel" role="dialog" aria-label="Node details">
   <button class="panel-close" id="panelClose" aria-label="Close details">✕</button>
   <div id="panelBody"></div>
@@ -182,8 +189,6 @@ const NODE_ICONS = {
   watchs11: 'watch',
   watchultra3: 'watch',
   visionprom5: 'vision',
-  appleintel: 'sparkle',
-  siri: 'sparkle',
 };
 
 function iconUri(name, color = '#ffffff') {
@@ -217,14 +222,10 @@ const NODES = [
   { id: 'visionos26', label: 'visionOS 26',      cat: 'software', url: 'https://en.wikipedia.org/wiki/VisionOS', desc: 'Brings spatial widgets and persistent Personas to Apple Vision Pro.' },
   { id: 'ios27',    label: 'iOS 27',             cat: 'software', url: 'https://en.wikipedia.org/wiki/IOS_27', desc: 'The 2026 update focused on speed, with faster Photos, AirDrop, and multitasking.' },
   { id: 'goldengate', label: 'macOS Golden Gate', cat: 'software', url: 'https://en.wikipedia.org/wiki/MacOS', desc: 'macOS 27, the first Apple-silicon-only Mac release, tuned for stability and Siri.' },
-  { id: 'appleintel', label: 'Apple Intelligence', cat: 'software', url: 'https://en.wikipedia.org/wiki/Apple_Intelligence', desc: 'Apple\u2019s on-device AI layer, now opened to apps through the Foundation Models framework.' },
-  { id: 'siri',     label: 'Siri',               cat: 'software', url: 'https://en.wikipedia.org/wiki/Siri', desc: 'The 2026 rebuilt Siri with on-screen awareness and personal-context understanding.' },
   // Developer tools
   { id: 'xcode26', label: 'Xcode 26', cat: 'developer', url: 'https://developer.apple.com/documentation/xcode-release-notes/xcode-26-release-notes', desc: 'Adds the Foundation Models SDK and AI-assisted coding intelligence.' },
   { id: 'xcode27', label: 'Xcode 27', cat: 'developer', url: 'https://developer.apple.com/documentation/xcode-release-notes/xcode-27-release-notes', desc: 'A redesigned, customizable toolbar with a built-in coding agent and multi-model Swift Assist.' },
-  { id: 'swift',   label: 'Swift',    cat: 'developer', url: 'https://developer.apple.com/swift/', desc: 'Apple\u2019s open-source language, now at Swift 6.2 across every platform here.' },
-  { id: 'swiftui', label: 'SwiftUI',  cat: 'developer', url: 'https://developer.apple.com/xcode/swiftui/', desc: 'Declarative UI framework spanning iOS, macOS, watchOS, and visionOS.' },
-  { id: 'foundationmodels', label: 'Foundation Models', cat: 'developer', url: 'https://developer.apple.com/documentation/foundationmodels', desc: 'Framework giving apps direct access to Apple\u2019s on-device large language models.' },
+  { id: 'swift',   label: 'Swift',    cat: 'developer', url: 'https://developer.apple.com/swift/', desc: 'Apple\u2019s open-source language; Xcode 26 ships Swift 6.1 and Xcode 27 ships Swift 6.2.' },
 ];
 
 const EDGES = [
@@ -234,8 +235,7 @@ const EDGES = [
   ['wwdc25', 'watchos26', 'announced'],
   ['wwdc25', 'visionos26', 'announced'],
   ['wwdc25', 'xcode26', 'announced'],
-  ['wwdc25', 'foundationmodels', 'introduced'],
-  ['wwdc25', 'appleintel', 'expanded'],
+
   // Awe Dropping (Sep 2025)
   ['awedropping', 'iphone17', 'introduced'],
   ['awedropping', 'iphone17pro', 'introduced'],
@@ -261,24 +261,15 @@ const EDGES = [
   ['ipadprom5', 'm5', 'powered by'],
   ['visionprom5', 'm5', 'powered by'],
   ['visionprom5', 'visionos26', 'runs'],
-  // Software / AI
-  ['ios26', 'appleintel', 'enables'],
-  ['tahoe26', 'appleintel', 'enables'],
-  ['foundationmodels', 'appleintel', 'taps'],
   // WWDC 2026
   ['wwdc26', 'ios27', 'announced'],
   ['wwdc26', 'goldengate', 'announced'],
-  ['wwdc26', 'siri', 'unveiled'],
+
   ['wwdc26', 'xcode27', 'announced'],
-  ['ios27', 'siri', 'includes'],
-  ['goldengate', 'siri', 'brings'],
-  ['siri', 'appleintel', 'part of'],
   // Developer
-  ['xcode26', 'swift', 'compiles'],
-  ['xcode26', 'swiftui', 'includes'],
-  ['xcode26', 'foundationmodels', 'SDK for'],
+  ['xcode26', 'swift', 'ships Swift 6.1'],
+
   ['xcode27', 'swift', 'ships Swift 6.2'],
-  ['swiftui', 'swift', 'built on'],
 ];
 
 // ---------- Build legend ----------
@@ -291,8 +282,8 @@ Object.values(CATEGORY).forEach(c => {
 });
 
 // ---------- Semantic layout: chronological x-axis + category swimlanes ----------
-const EVENT_X = { wwdc25: 0, awedropping: 1, m5launch: 1.85, wwdc26: 3.2 };
-const LANE_ORDER = ['silicon', 'device', 'event', 'software', 'developer'];
+const EVENT_X = { wwdc26: 0, m5launch: 1.35, awedropping: 2.2, wwdc25: 3.2 };
+const LANE_ORDER = ['event', 'device', 'silicon', 'software', 'developer'];
 const X_SCALE = 270, LANE_GAP = 165, MIN_GAP = 135, STAGGER = 26;
 
 function computePositions() {
